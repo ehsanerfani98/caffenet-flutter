@@ -1,0 +1,46 @@
+# ── Flutter / Dart ──
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+coverage/
+*.g.dart
+*.mocks.dart
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# Platform folders are generated with `flutter create .` (see README — Setup step 1)
+# and kept out of the repo to avoid Gradle wrapper binaries in git.
+android/
+ios/
+web/
+linux/
+macos/
+windows/
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# ── Vendored Laravel backend (laravel/) ──
+laravel/vendor/
+laravel/node_modules/
+laravel/.env
+laravel/.env.*.backup
+laravel/storage/logs/*.log
+laravel/storage/framework/cache/data/*
+laravel/storage/framework/sessions/*
+laravel/storage/framework/views/*
+laravel/database/*.sqlite
+laravel/database/*.sqlite-journal
+!laravel/storage/framework/cache/data/.gitignore
+!laravel/storage/framework/sessions/.gitignore
+!laravel/storage/framework/views/.gitignore

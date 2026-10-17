@@ -1,0 +1,36 @@
+{
+  "id": "/",
+  "name": "کافی‌نت احسان - سامانه خدمات اینترنتی",
+  "short_name": "کافی‌نت",
+  "description": "اپلیکیشن پیشرو وب (PWA) ارائه آنلاین خدمات کافی‌نت، پرینت و ثبت‌نام با پیگیری سفارشات.",
+  "lang": "fa",
+  "dir": "rtl",
+  "theme_color": "#1559de",
+  "background_color": "#1559de",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    { "src": "/pwa-48x48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-72x72.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-96x96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-256x256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screen.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "platform": "wide"
+    }
+  ]
+}
