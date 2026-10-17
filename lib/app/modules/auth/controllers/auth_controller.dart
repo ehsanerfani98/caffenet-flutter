@@ -1,11 +1,14 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../../../core/routes/app_routes.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/catalog_repository.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/values/strings.dart';
 
 /// Auth دو مرحله‌ای: شماره موبایل → OTP (T3.2/T3.3 پلن).
 class AuthController extends GetxController {
@@ -19,6 +22,13 @@ class AuthController extends GetxController {
   final phoneError = Rxn<String>();
   final sending = false.obs;
 
+  // ── پذیرش قوانین — مطابق وب: تیک صریح الزامی (auth.js) ──
+  static const String _termsKey = 'caffenet_terms_accepted';
+  final termsAccepted = false.obs;
+
+  /// سامانه پیامک غیرفعال (settings.smsEnabled == false).
+  final smsOff = false.obs;
+
   // ── مرحله ۲: OTP ──
   final step = 0.obs; // 0 = phone, 1 = otp
   final codeCtrl = TextEditingController();
@@ -31,6 +41,12 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // پذیرش قوانین ذخیره‌شده (مطابق localStorage وب).
+    termsAccepted.value = GetStorage().read(_termsKey) == '1';
+    // وضعیت سامانه پیامک از تنظیمات کش‌شده.
+    try {
+      smsOff.value = !(Get.find<SettingsRepository>().cached?.smsEnabled ?? true);
+    } catch (_) {}
     phoneCtrl.addListener(() {
       if (phoneError.value != null) phoneError.value = null;
     });
@@ -39,8 +55,28 @@ class AuthController extends GetxController {
     });
   }
 
+  void toggleTerms(bool? v) {
+    termsAccepted.value = v == true;
+    try {
+      if (v == true) {
+        GetStorage().write(_termsKey, '1');
+      } else {
+        GetStorage().remove(_termsKey);
+      }
+    } catch (_) {}
+  }
+
   // ── مرحله ۱ ──
   Future<void> sendOtp() async {
+    // پذیرش صریح قوانین — تنها مسیر مجاز ادامه (مطابق auth.js وب).
+    if (!termsAccepted.value) {
+      CnSnack.warning(Strings.authTermsRequired);
+      return;
+    }
+    if (smsOff.value) {
+      CnSnack.warning(Strings.authSmsOff);
+      return;
+    }
     final phone = Validators.normalizePhone(phoneCtrl.text);
     final err = Validators.phone(phone);
     if (err != null) {

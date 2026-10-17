@@ -1,0 +1,63 @@
+name: caffenet
+description: اپلیکیشن مشتری کافی‌نت احسان — Flutter + Laravel API
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── معماری و state (فاز 0) ──
+  get: ^4.6.6
+
+  # ── شبکه و کش (فاز 1) ──
+  http: ^1.2.0
+  sqflite: ^2.3.0
+  get_storage: ^2.1.1
+  flutter_secure_storage: ^11.2.0
+
+  # ── نمایش و ابزار (فاز 0/1) ──
+  intl: ^0.20.2
+  persian_number_utility: ^1.1.6
+  url_launcher: ^6.3.3
+
+  # ── اعلان محلی (فاز 7) ──
+  flutter_local_notifications: ^22.1.0
+
+  # ── افزوده‌های لازم (فایل سفارش — هسته کسب‌وکار) ──
+  image_picker: ^1.2.4
+  file_picker: ^13.1.0
+
+  # ── فاز 8 (تصمیم باز — با فعال‌سازی از کامنت خارج شود) ──
+  # flutter_map: ^8.3.1          # AddressPicker نقشه‌ای برای سفارش پیک
+  # latlong2: ^0.10.1
+  # geolocator: ^14.0.2
+  # geocoding: ^5.0.0
+  # app_links: ^6.4.1            # اگر callback درگاه به caffenet:// تغییر کرد (BE-7)
+  # shared_preferences: ^2.5.5   # همپوشان با GetStorage — پیش‌فرض بی‌استفاده
+  # pusher_reverb_flutter: ^0.0.9  # بک‌اند cPanel WebSocket ندارد (QUEUE_SYSTEM.md) — فعلاً بی‌استفاده
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Peyda
+      fonts:
+        - asset: assets/fonts/PeydaFaNum-Regular.ttf
+        - asset: assets/fonts/PeydaFaNum-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PeydaFaNum-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PeydaFaNum-Bold.ttf
+          weight: 700
+    - family: Vazir
+      fonts:
+        - asset: assets/fonts/Vazir.ttf

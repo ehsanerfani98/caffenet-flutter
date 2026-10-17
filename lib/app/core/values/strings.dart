@@ -27,9 +27,22 @@ class Strings {
 
   // ── Bottom nav ──
   static const String navHome = 'خانه';
+  static const String navCatalog = 'دسته‌بندی';
   static const String navOrders = 'سفارش‌ها';
   static const String navWallet = 'کیف پول';
   static const String navProfile = 'پروفایل';
+
+  // ── AppBar titles (نگاشت screenTitles() از app.js پله) ──
+  static const String barHomeT1 = 'کافی‌نت احسان';
+  static const String barHomeT2 = 'خدمات آنلاین، سریع و مطمئن';
+  static const String barCatalogT1 = 'دسته‌بندی خدمات';
+  static const String barCatalogT2 = 'انتخاب خدمت مورد نظر';
+  static const String barOrdersT1 = 'سفارش‌های من';
+  static const String barOrdersT2 = 'پیگیری وضعیت سفارش‌ها';
+  static const String barWalletT1 = 'کیف پول';
+  static const String barWalletT2 = 'موجودی و شارژ';
+  static const String barProfileT1 = 'پروفایل';
+  static const String barProfileT2 = 'حساب کاربری';
 
   // ── Splash / Onboarding ──
   static const String splashTagline = 'خدمات دانشجویی، چاپ و امور اداری — سریع و مطمئن';
@@ -40,8 +53,19 @@ class Strings {
   static const String onb3Title = 'پیگیری زنده صف';
   static const String onb3Body = 'نوبت شما، زمان تخمینی شروع و اتمام کار را لحظه‌ای ببینید و باخبر شوید.';
 
+  // ── Home (ساختار landing.js پله) ──
+  static const String homeSearchLabel = 'جستجوی خدمات…';
+  static const String searchSheetTitle = 'جستجوی خدمات';
+  static const String searchSheetSub = 'نام خدمت مورد نظرتان را بنویسید';
+  static const String searchSheetHint = 'مثلاً پرینت، ترجمه، اسکن…';
+  static const String suggestionsTitle = 'پیشنهاد ما';
+  static const String servicesUnitSuffix = ' خدمت';
+  static const String resultsCountSuffix = ' نتیجه برای «';
+  static const String seeMore = 'مشاهده بیشتر';
+  static const String noCategoriesShort = 'هنوز دسته‌بندی ثبت نشده است.';
+
   // ── Auth ──
-  static const String loginTitle = 'ورود | ثبت‌نام';
+  static const String loginTitle = 'ورود / ثبت‌نام';
   static const String loginSubtitle = 'شماره موبایل خود را وارد کنید تا کد تایید برایتان ارسال شود.';
   static const String phoneLabel = 'شماره موبایل';
   static const String phoneHint = '۰۹۱۲۳۴۵۶۷۸۹';
@@ -56,6 +80,14 @@ class Strings {
   static const String otpChangePhone = 'تغییر شماره';
   static const String otpWrongCode = 'کد وارد شده صحیح نیست.';
   static const String testCodeChip = 'کد آزمایشی:';
+  static const String otpResendCountdownSuffix = ' ثانیه دیگر';
+  static const String authTermsLink = 'شرایط استفاده از خدمات و حریم خصوصی';
+  static const String authTermsConsentSuffix = ' را می‌پذیرم';
+  static const String authTermsRequired = 'برای ادامه، پذیرش شرایط استفاده از خدمات و حریم خصوصی الزامی است.';
+  static const String authSmsOff = 'سامانه پیامک غیرفعال است؛ در حال حاضر امکان دریافت کد تایید وجود ندارد. با مدیر سامانه تماس بگیرید.';
+  static const String authTestCodeBody = 'حالت آزمایشی: کد تایید شما';
+  static const String authTestAutofill = 'درج خودکار کد';
+  static const String authInvalidPhone = 'شماره موبایل معتبر نیست.';
 
   // ── Home ──
   static const String homeGreeting = 'سلام';
@@ -137,7 +169,19 @@ class Strings {
   // ── Wallet ──
   static const String walletTitle = 'کیف پول';
   static const String walletBalance = 'موجودی';
+  static const String walletBalanceCard = 'موجودی کیف پول';
+  static const String walletShieldNote = 'موجودی فقط با پرداخت آنلاین شارژ می‌شود';
   static const String walletTopUp = 'شارژ کیف پول';
+  static const String walletCustomAmountLabel = 'مبلغ دلخواه (بین ۱۰ هزار تا ۵۰ میلیون تومان)';
+  static const String walletCustomHint = 'مثلاً ۳۰۰۰۰۰';
+  static const String walletTopUpBazaarPay = 'شارژ با بازارپی';
+  static const String walletTopUpOnline = 'شارژ آنلاین';
+  static const String walletHistory = 'تاریخچه تراکنش‌ها';
+  static const String walletInfoBoxText = 'افزایش موجودی پس از تایید درگاه به‌صورت خودکار اعمال می‌شود.\nپس از شارژ، می‌توانید سفارش خود را ثبت و از کیف پول پرداخت کنید.';
+  static const String walletTxAfterBalance = 'موجودی پس از تراکنش:';
+  static const String walletGuestGate = 'برای مشاهده کیف پول وارد شوید';
+  static const String walletMinCharge = 'حداقل مبلغ شارژ ۱۰٬۰۰۰ تومان است.';
+  static const String walletMaxCharge = 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.';
   static const String walletTransactions = 'تراکنش‌ها';
   static const String walletNoTransactions = 'هنوز تراکنشی ثبت نشده است.';
   static const String topUpAmount = 'مبلغ شارژ';
@@ -161,7 +205,18 @@ class Strings {
   // ── Orders ──
   static const String ordersTitle = 'سفارش‌های من';
   static const String noOrders = 'هنوز سفارشی ثبت نکرده‌اید.';
+  static const String noOrdersInFilter = 'سفارشی در این دسته نیست';
   static const String ordersAll = 'همه';
+  static const String ordersOpen = 'در جریان';
+  static const String ordersReadyFilter = 'آماده تحویل';
+  static const String ordersDeliveredFilter = 'تحویل شده';
+  static const String ordersCancelledFilter = 'لغو شده';
+  static const String ordersRefundedFilter = 'عودت شده';
+  static const String statusSubmitted = 'ثبت‌شده';
+  static const String statusReady = 'آماده تحویل / دانلود';
+  static const String statusDelivered = 'تحویل داده شده';
+  static const String statusRefunded = 'عودت شده';
+  static const String trackCta = 'پیگیری ↗';
   static const String orderNumber = 'شماره سفارش';
   static const String orderService = 'خدمت';
   static const String orderStatus = 'وضعیت';
@@ -225,6 +280,17 @@ class Strings {
 
   // ── Profile / Settings ──
   static const String profileTitle = 'پروفایل';
+  static const String profileGuestName = 'کاربر مهمان';
+  static const String profileGuestSub = 'برای ثبت سفارش و استفاده از کیف پول وارد شوید';
+  static const String profileLoginCta = 'ورود / ثبت‌نام';
+  static const String profileWalletRow = 'کیف پول';
+  static const String profileNotify = 'فعال‌سازی نوتیفیکیشن';
+  static const String profileNotifySub = 'دریافت اعلان وضعیت سفارش‌ها';
+  static const String profilePrivacy = 'حریم خصوصی';
+  static const String profilePrivacySub = 'داده‌های شما فقط روی همین سامانه ذخیره می‌شود';
+  static const String profileAddressPrefix = 'آدرس: ';
+  static const String profilePhonePrefix = 'تلفن: ';
+  static const String profileHoursPrefix = 'ساعت کاری: ';
   static const String profileName = 'نام و نام خانوادگی';
   static const String profilePhone = 'شماره موبایل';
   static const String profileRole = 'نقش';

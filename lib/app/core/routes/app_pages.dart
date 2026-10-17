@@ -149,7 +149,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.wallet,
-      page: () => const WalletView(),
+      page: () => WalletView(),
       binding: WalletBinding(),
       middlewares: const [AuthMiddleware()],
       transition: Transition.fadeIn,

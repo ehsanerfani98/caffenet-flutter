@@ -19,14 +19,14 @@ class OrdersController extends GetxController {
   final orders = <OrderModel>[].obs;
   final filter = 'all'.obs;
 
+  /// فیلترهای وب (landing.js orders): همه/در جریان/آماده/تحویل/لغو/عودت.
   static const List<({String key, String label})> filters = [
     (key: 'all', label: Strings.ordersAll),
-    (key: 'pending_payment', label: 'در انتظار پرداخت'),
-    (key: 'submitted', label: 'در صف انجام'),
-    (key: 'processing', label: 'در حال انجام'),
-    (key: 'ready', label: 'آماده تحویل'),
-    (key: 'delivered', label: 'تحویل شده'),
-    (key: 'cancelled', label: 'لغو شده'),
+    (key: 'open', label: Strings.ordersOpen),
+    (key: 'ready', label: Strings.ordersReadyFilter),
+    (key: 'delivered', label: Strings.ordersDeliveredFilter),
+    (key: 'cancelled', label: Strings.ordersCancelledFilter),
+    (key: 'refunded', label: Strings.ordersRefundedFilter),
   ];
 
   @override
@@ -36,7 +36,12 @@ class OrdersController extends GetxController {
   }
 
   List<OrderModel> get filtered {
+    // پورت renderList() وب: OPEN = pending_payment/submitted/processing (بدون ready)
     if (filter.value == 'all') return orders;
+    if (filter.value == 'open') {
+      const open = ['pending_payment', 'submitted', 'processing'];
+      return orders.where((o) => open.contains(o.status)).toList();
+    }
     return orders.where((o) => o.status == filter.value).toList();
   }
 

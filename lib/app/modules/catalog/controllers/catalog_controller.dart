@@ -18,6 +18,9 @@ class CatalogController extends GetxController {
   final categories = <CategoryModel>[].obs;
   final query = ''.obs;
 
+  /// چیپ دسته انتخاب‌شده — «all» یا categoryId (ساختار وب).
+  final selectedCat = 'all'.obs;
+
   CategoryModel? category; // آرگومان صفحه دسته
   ServiceModel? service; // آرگومان صفحه جزئیات
 
@@ -52,13 +55,15 @@ class CatalogController extends GetxController {
     }
   }
 
-  /// جستجوی محلی روی کش L3 (بدون network — T4.5).
+  /// جستجوی محلی + فیلتر چیپ دسته — پورت renderList() وب.
   List<ServiceModel> get filtered {
     final q = query.value.trim();
-    if (q.isEmpty) return services;
-    return services
-        .where((s) => s.title.contains(q) || s.description.contains(q))
-        .toList();
+    final cat = selectedCat.value;
+    return services.where((s) {
+      if (cat != 'all' && s.categoryId != cat) return false;
+      if (q.isEmpty) return true;
+      return s.title.contains(q) || s.description.contains(q);
+    }).toList();
   }
 
   /// ثبت سفارش — فقط مشتری (T4.6: پیام مناسب برای staff).

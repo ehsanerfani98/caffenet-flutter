@@ -5,99 +5,173 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_mapper.dart';
 import '../../../core/values/strings.dart';
+import '../../../core/widgets/cn_bottom_nav.dart';
+import '../../../core/widgets/cn_cards.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../data/models/service_model.dart';
 import '../controllers/catalog_controller.dart';
-import '../../../core/theme/app_text_styles.dart';
 
-/// کاتالوگ کامل با جستجو (T4.5).
+/// کاتالوگ — پورت دقیق Screens.catalog از landing.js:
+/// جستجو + ردیف چیپ دسته‌ها + گرید ۲ستونه کارت خدمت.
 class CatalogView extends GetView<CatalogController> {
   const CatalogView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(Strings.services)),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              onChanged: (v) => controller.query.value = v,
-              decoration: const InputDecoration(
-                hintText: Strings.search,
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => controller.load(fresh: true),
-              child: Obx(() {
-                final st = controller.status.value;
-                if (st.isLoading) return const LoadingSkeleton(lines: 6);
-                if (st.isError) {
-                  return CnErrorRetry(message: st.errorMessage, onRetry: () => controller.load(fresh: true));
-                }
-                final list = controller.filtered;
-                if (st.isEmpty || list.isEmpty) {
-                  return CnEmptyState(
-                    icon: Icons.search_off_outlined,
-                    title: controller.query.value.isEmpty ? Strings.noServices : Strings.noServicesFound,
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: list.length,
-                  itemBuilder: (c, i) => _ServiceTile(
-                    service: list[i],
-                    onTap: () => Get.toNamed('/service-detail', arguments: list[i]),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
+      appBar: CnBrandBar(
+        title: Strings.barCatalogT1,
+        subtitle: Strings.barCatalogT2,
+        actions: cnCustomerBarActions(),
       ),
+      body: RefreshIndicator(
+        onRefresh: () => controller.load(fresh: true),
+        child: Obx(() {
+          final st = controller.status.value;
+          if (st.isLoading) return const LoadingSkeleton(lines: 6);
+          if (st.isError) {
+            return CnErrorRetry(
+                message: st.errorMessage, onRetry: () => controller.load(fresh: true));
+          }
+          return Column(
+            children: [
+              // ── جستجو ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                child: TextField(
+                  onChanged: (v) => controller.query.value = v,
+                  style: const TextStyle(fontFamily: 'Peyda', fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: 'جستجو در خدمات…',
+                    isDense: true,
+                    prefixIcon:
+                        const Icon(Icons.search_rounded, size: 17, color: CnColors.inkSoft),
+                  ),
+                ),
+              ),
+              // ── چیپ دسته‌ها ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SizedBox(
+                  height: 38,
+                  child: Obx(() {
+                    final cats = controller.categories;
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      itemCount: cats.length + 1,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final isAll = i == 0;
+                        final catId = isAll ? 'all' : cats[i - 1].id;
+                        return CnChip(
+                          label: isAll ? Strings.ordersAll : cats[i - 1].title,
+                          active: controller.selectedCat.value == catId,
+                          onTap: () => controller.selectedCat.value = catId,
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // ── لیست خدمات ──
+              Expanded(
+                child: Obx(() {
+                  final list = controller.filtered;
+                  if (st.isEmpty || list.isEmpty) {
+                    return CnEmptyState(
+                      icon: Icons.search_off_rounded,
+                      title: controller.query.value.isEmpty || controller.selectedCat.value != 'all'
+                          ? Strings.noServices
+                          : Strings.noServicesFound,
+                      subtitle: controller.query.value.isNotEmpty
+                          ? 'عبارت دیگری را جستجو کنید'
+                          : null,
+                    );
+                  }
+                  return LayoutBuilder(builder: (cc, box) {
+                    const gap = 10.0;
+                    final w = (box.maxWidth - 28 - gap) / 2;
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 18),
+                      child: Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: list
+                            .map((s) => SizedBox(
+                                  width: w,
+                                  child: ServiceCard(
+                                    service: s,
+                                    onTap: () => Get.toNamed('/service-detail', arguments: s),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    );
+                  });
+                }),
+              ),
+            ],
+          );
+        }),
+      ),
+      bottomNavigationBar: const CnBottomNav(current: 1),
     );
   }
 }
 
-/// صفحه خدمات یک دسته.
+/// صفحه خدمات یک دسته — همان زبان بصری با هدر برند و گرید ۲ستونه.
 class CatalogCategoryView extends GetView<CatalogController> {
   const CatalogCategoryView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(controller.category?.title ?? Strings.services)),
+      appBar: CnBrandBar(
+        title: controller.category?.title ?? Strings.barCatalogT1,
+        subtitle: Strings.barCatalogT2,
+      ),
       body: RefreshIndicator(
         onRefresh: () => controller.load(fresh: true),
         child: Obx(() {
           final st = controller.status.value;
           if (st.isLoading) return const LoadingSkeleton(lines: 5);
           if (st.isError) {
-            return CnErrorRetry(message: st.errorMessage, onRetry: () => controller.load(fresh: true));
+            return CnErrorRetry(
+                message: st.errorMessage, onRetry: () => controller.load(fresh: true));
           }
           final list = controller.filtered;
           if (st.isEmpty || list.isEmpty) {
             return const CnEmptyState(icon: Icons.category_outlined, title: Strings.noServices);
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: list.length,
-            itemBuilder: (c, i) => _ServiceTile(
-              service: list[i],
-              onTap: () => Get.toNamed('/service-detail', arguments: list[i]),
-            ),
-          );
+          return LayoutBuilder(builder: (cc, box) {
+            const gap = 10.0;
+            final w = (box.maxWidth - 28 - gap) / 2;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(14),
+              child: Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: list
+                    .map((s) => SizedBox(
+                          width: w,
+                          child: ServiceCard(
+                            service: s,
+                            onTap: () => Get.toNamed('/service-detail', arguments: s),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            );
+          });
         }),
       ),
     );
   }
 }
 
-/// جزئیات خدمت — قیمت پایه + فرمول + دکمه ثبت (T4.6).
+/// جزئیات خدمت — svc-icon بزرگ + قیمت پایه + فرمول + دکمه ثبت.
 class ServiceDetailView extends GetView<CatalogController> {
   const ServiceDetailView({super.key});
 
@@ -107,129 +181,108 @@ class ServiceDetailView extends GetView<CatalogController> {
     if (s == null) {
       return const Scaffold(body: CnEmptyState(title: Strings.noServices));
     }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = s.iconColor.isNotEmpty ? IconMapper.color(s.iconColor) : null;
     return Scaffold(
       appBar: AppBar(title: Text(s.title)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: IconMapper.color(s.iconColor).withOpacity(.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(IconMapper.safe(s.icon),
-                            color: IconMapper.color(s.iconColor), size: 28),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(s.title, style: Theme.of(context).textTheme.titleLarge),
-                            const SizedBox(height: 4),
-                            if (s.estimatedTime.isNotEmpty)
-                              Text('${Strings.estimatedTime}: ${s.estimatedTime}',
-                                  style: Theme.of(context).textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 26),
-                  PriceRow(label: Strings.basePrice, amount: Formatters.tomanWithUnit(s.basePrice), bold: true),
-                ],
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF141E33) : CnColors.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF24324E) : CnColors.line,
               ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? (iconColor ?? CnColors.sky).withOpacity(.18)
+                            : CnColors.skySoft,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(IconMapper.safe(s.icon),
+                          size: 21,
+                          color: isDark
+                              ? (iconColor ?? CnColors.skySoft)
+                              : (iconColor ?? CnColors.skyDeep)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(s.title,
+                          style: TextStyle(
+                              fontFamily: 'Peyda', fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface)),
+                    ),
+                  ],
+                ),
+                if (s.description.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(s.description,
+                      style: TextStyle(
+                          fontFamily: 'Peyda', fontSize: 11.5, height: 1.8,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(.6))),
+                ],
+              ],
             ),
           ),
-          if (s.description.isNotEmpty) ...[
-            SectionHeader(title: 'توضیحات'),
-            Text(s.description, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-          if (s.pricingFormulaDescription.isNotEmpty) ...[
-            SectionHeader(title: Strings.pricingFormula),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: CnColors.skySoft.withOpacity(.5),
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF141E33) : CnColors.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF24324E) : CnColors.line,
               ),
-              child: Text(s.pricingFormulaDescription,
-                  style: Theme.of(context).textTheme.bodySmall),
             ),
-          ],
-          const SizedBox(height: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _metaRow(context, Strings.basePrice,
+                    s.basePrice > 0 ? Formatters.toman(s.basePrice) : 'محاسبه در سفارش'),
+                if (s.estimatedTime.isNotEmpty)
+                  _metaRow(context, Strings.estimatedTime, s.estimatedTime),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           CnButton(
             label: Strings.orderThisService,
-            icon: Icons.add_shopping_cart_outlined,
+            icon: Icons.shopping_cart_outlined,
             onPressed: () => controller.openOrderForm(s),
           ),
         ],
       ),
     );
   }
-}
 
-/// آیتم خدمت در لیست (icon, basePrice فارسی, estimatedTime — T4.5).
-class _ServiceTile extends StatelessWidget {
-  const _ServiceTile({required this.service, required this.onTap});
-
-  final ServiceModel service;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: IconMapper.color(service.iconColor).withOpacity(.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(IconMapper.safe(service.icon),
-                      color: IconMapper.color(service.iconColor), size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(service.title,
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 2),
-                      if (service.estimatedTime.isNotEmpty)
-                        Text('${Strings.estimatedTime}: ${service.estimatedTime}',
-                            style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-                Text(Formatters.tomanWithUnit(service.basePrice),
-                    style: AppTextStyles.price(context)),
-              ],
-            ),
-          ),
-        ),
+  static Widget _metaRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontFamily: 'Peyda', fontSize: 12.5,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(.6))),
+          Text(value,
+              style: const TextStyle(
+                  fontFamily: 'Peyda', fontSize: 12.5,
+                  fontWeight: FontWeight.w700, color: CnColors.skyDeep)),
+        ],
       ),
     );
   }

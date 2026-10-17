@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../values/strings.dart';
-
 /// پالت برند — استخراج‌شده از CSS پله PWA (`--sky #1559de` …).
 class CnColors {
   CnColors._();
@@ -132,10 +130,11 @@ class AppTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: isDark ? const Color(0xFF24324E) : CnColors.skySoft,
           disabledForegroundColor: textSoft,
-          minimumSize: const Size.fromHeight(50),
+          minimumSize: const Size.fromHeight(46),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-          textStyle: const TextStyle(fontFamily: fontFamily, fontSize: 15.5, fontWeight: FontWeight.w600),
+          // web .btn → 13.5px/700 — نزدیک‌ترین معادل فلاتر
+          textStyle: const TextStyle(fontFamily: fontFamily, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -154,18 +153,22 @@ class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: isDark ? const Color(0xFF141E33) : CnColors.slateSoft,
+        // web .chip → پس‌زمینه سفید + حاشیه 1.5px + radius 22 (قرصی)
+        backgroundColor: isDark ? const Color(0xFF141E33) : CnColors.card,
         selectedColor: CnColors.skySoft,
-        labelStyle: TextStyle(fontSize: 12.5, color: text, fontFamily: fontFamily),
-        side: BorderSide(color: isDark ? const Color(0xFF24324E) : CnColors.line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSoft, fontFamily: fontFamily),
+        secondaryLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: CnColors.skyDeep, fontFamily: fontFamily),
+        side: BorderSide(color: isDark ? const Color(0xFF24324E) : CnColors.line, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
       ),
       snackBarTheme: SnackBarThemeData(
+        // web .toast → پس‌زمینه --dark، radius 14، پایین صفحه
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? const Color(0xFF1E293B) : CnColors.dark,
-        contentTextStyle: const TextStyle(fontFamily: fontFamily, fontSize: 13.5, color: Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+        backgroundColor: CnColors.dark,
+        contentTextStyle: const TextStyle(fontFamily: fontFamily, fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFFF8FAFC)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        elevation: 8,
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: card,
@@ -175,11 +178,13 @@ class AppTheme {
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: card,
+        // web .sheet → radius 22 بالای شیت + دستگیره 42×4 با رنگ #CBD5E1
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         showDragHandle: true,
-        dragHandleColor: textSoft,
+        dragHandleColor: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+        dragHandleSize: const Size(42, 4),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: card,
@@ -209,31 +214,56 @@ class AppTheme {
   }
 }
 
-/// اسنک‌بارهای یکدست اپ.
+/// توست‌های یکدست اپ — بازسازی دقیق .toast پله:
+/// پس‌زمینه --dark، radius 14، آیکون رنگی، پایین صفحه.
 class CnSnack {
   CnSnack._();
 
-  static void info(String message) =>
-      Get.snackbar(Strings.appName, message, snackPosition: SnackPosition.TOP,
-          margin: const EdgeInsets.all(12), duration: const Duration(seconds: 3));
+  static Color _iconColor(String type) => switch (type) {
+        'success' => const Color(0xFF34D399), // emerald-400
+        'error' => const Color(0xFFFB7185), // rose-400
+        'warning' => const Color(0xFFFBBF24), // amber-400
+        _ => const Color(0xFF38BDF8), // sky-400
+      };
 
-  static void success(String message) => Get.snackbar(
-        '✓', message,
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(12),
-        duration: const Duration(seconds: 3),
-        backgroundColor: CnColors.emerald,
-        colorText: Colors.white,
-        titleText: const SizedBox.shrink(),
-      );
+  static IconData _icon(String type) => switch (type) {
+        'success' => Icons.check_circle_rounded,
+        'error' => Icons.cancel_rounded,
+        'warning' => Icons.warning_amber_rounded,
+        _ => Icons.info_rounded,
+      };
 
-  static void error(String message) => Get.snackbar(
-        '!', message,
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(12),
-        duration: const Duration(seconds: 4),
-        backgroundColor: CnColors.rose,
-        colorText: Colors.white,
-        titleText: const SizedBox.shrink(),
-      );
+  static void _show(String message, String type, {int seconds = 3}) {
+    Get.closeAllSnackbars();
+    Get.rawSnackbar(
+      messageText: Row(
+        children: [
+          Icon(_icon(type), size: 17, color: _iconColor(type)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(message,
+                style: const TextStyle(
+                    fontFamily: 'Peyda',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFF8FAFC))),
+          ),
+        ],
+      ),
+      backgroundColor: CnColors.dark,
+      borderRadius: 14,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      duration: Duration(seconds: seconds),
+      animationDuration: const Duration(milliseconds: 250),
+      snackPosition: SnackPosition.BOTTOM,
+      isDismissible: true,
+      forwardAnimationCurve: Curves.easeOutCubic,
+    );
+  }
+
+  static void info(String message) => _show(message, 'info');
+  static void success(String message) => _show(message, 'success');
+  static void error(String message) => _show(message, 'error', seconds: 4);
+  static void warning(String message) => _show(message, 'warning');
 }
