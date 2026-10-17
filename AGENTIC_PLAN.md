@@ -176,6 +176,7 @@ assets/
 |---|---|---|
 | `image_picker` | فاز 5 | آپلود «فایل/عکس» مشتری هسته کسب‌وکار است (`customerFiles` + `POST /upload` multipart) |
 | `file_picker` | فاز 5 | انتخاب PDF/سند برای پرینت (عکس تنها کافی نیست) |
+| BazaarPay Android SDK (ناتیو، JitPack `com.github.cafebazaar:bazaarpay:5.4.0` — پلاگین pub رسمی وجود ندارد) | فاز 8 (اختیاری — T8.6a/b) | UX پرداخت درون‌اپ اندروید از طریق پل MethodChannel؛ نیاز به API 17+ و checkout_token/PaymentURL ساخته‌شده سمت سرور. مسیر پیش‌فرض پرداخت وب است و SDK فقط بهبود UX اندروید با fallback خودکار |
 
 **افزودنی‌های پیشنهادی (تصمیم باز — بخش 13):** `firebase_core` + `firebase_messaging` (پوش بک‌گراند؛ بک‌اند endpoint دارد ولی نیاز به پروژه Firebase/google-services.json دارد)، `shamsi_date` (اگر تاریخ جلالی خواست شد؛ راه دیگر: فرمت از سرور).
 
@@ -216,7 +217,7 @@ assets/
 | 25 | `POST /orders/{id}/ticket` | token | گفتگوی سفارش | orders |
 | 26 | `PATCH /orders/{id}` + `DELETE /orders/{id}` | token | ویرایش/حذف سفارش (در وضعیت مجاز) | orders |
 | 27 | `GET /slider` | optional | بنرهای صفحه اصلی → L2 | home |
-| 28 | `POST /orders/{id}/pay-bazaarpay` | token | پرداخت مستقیم بازارپی (اختیاری فاز 8) | wallet |
+| 28 | `POST /orders/{id}/pay-bazaarpay` + `GET /payments/bazaarpay/contract` | token/— | Direct Pay بازارپی (فاز 8؛ جریان کامل در بخش 4.5): خروجی `paid/pending/failed` یا `contract_pending{contractRedirectUrl, paymentId, orderId}`؛ مسیر دوم فقط callback مرورگر پس از امضای قرارداد است و اپ آن را صدا نمی‌زند | wallet |
 | 29 | `GET /fcm/config` + `POST /fcm/token` | token/mixed | پوش (اختیاری فاز 8) | core |
 
 **پارامترهای ثبت سفارش (12):** `{serviceId, formData{}, contactMethods[], urgency: normal|urgent|immediate, deliveryMethod: download|courier|in_person, deliveryAddress?, deliveryPostalCode?, couponCode?, customerNote?, customerFiles[{id,name,size,type,url}]}`. خطاهای معنایی: `WALLET_ONLY`، `INSUFFICIENT_WALLET{required,balance,shortfall}`، خطای فیلد اجباری با label فارسی.
@@ -260,6 +261,89 @@ assets/
 ```
 
 `app_links` در MVP استفاده نمی‌شود چون callback درگاه به وب SPA برمی‌گردد؛ polling روی `/payments/status` منبع حقیقت است (سرور idempotent و self-healing طراحی شده). اگر بعداً خواستیم UX را بدون polling قطع کنیم، تسک T8.x ریدایرکت `verify()` را برای user-agent اپ به `caffenet://payment?authority=…` تغییر می‌دهد و `app_links` فعال می‌شود.
+
+### 4.5 پرداخت درون‌برنامه‌ای بازارپی (BazaarPay) — مستند بر اساس منابع رسمی
+
+این بخش عیناً بر اساس مستندات رسمی نوشته و با کد فعلی بک‌اند تطبیق داده شده است:
+
+- **payment.md** (checkout/init، trace، commit، refund): `github.com/BazaarPay/Docs/blob/main/fa/payment.md`
+- **direct-pay.md** (قرارداد پرداخت مستقیم): `github.com/BazaarPay/Docs/blob/main/fa/direct-pay.md`
+- **Android SDK**: `github.com/cafebazaar/BazaarPay` — JitPack `com.github.cafebazaar:bazaarpay:5.4.0`، حداقل Android API 17، نیازمند **Checkout Token / PaymentURL ساخته‌شده سمت سرور قبل از شروع پرداخت**
+
+**نقشه مسئولیت‌ها:** تمام APIهای مرچنت بازارپی فقط سمت سرور لاراول صدا زده می‌شوند — `BazaarPayService` همین حالا کامل پیاده دارد: `initCheckout` (`POST /badje/v1/checkout/init/` با `{amount(rial), destination, service_name}`)، `gatewayRedirectUrl`، `trace`، `commit` (204)، `refund`، `initContract`، `contractPageUrl`، `traceContract`، `payWithContract` (v2 برای خطای ساخت‌یافته) و `payableAmount` + حالت تست `TEST-`. اپ فلاتر **هرگز** توکن مرچنت ندارد و فقط با endpointهای خود بک‌اند کار می‌کند: `/payments/request`، `/payments/status`، `/orders/{id}/pay-bazaarpay`.
+
+#### 4.5.1 سه مسیر پرداخت با بازارپی
+
+| مسیر | پلتفرم | UX | وضعیت در پلن |
+|---|---|---|---|
+| A) وب ریدایرکت (checkout) | هر دو | مرورگر خارجی → بازگشت به وب + polling | **MVP (T6.4)** — بدون کد ناتیو |
+| B) SDK اندروید (پرداخت درون‌اپ) | فقط Android | صفحه پرداخت بازارپی داخل اپ (Activity Result API) | فاز 8 — T8.6a/b |
+| C) Direct Pay (قرارداد؛ پرداخت خودکار سفارش بدون دخالت کاربر) | هر دو (امضای قرارداد: وب یا SDK) | یک دکمه → پرداخت کامل | فاز 8 — T8.6c/d/e |
+
+#### 4.5.2 جریان A — شارژ کیف پول با وب‌گیت بازارپی (پیاده‌شده در بک‌اند؛ مرجع T6.4)
+
+1. `POST /payments/request {amount, gateway:'bazaarpay'}` → `{gateway:'bazaarpay', paymentId, authority(=checkout_token), redirectUrl}` — بک‌اند `checkout/init` رسمی را صدا زده و `redirectUrl` را طبق مستندات با `redirect_url` کدشده (→ `…/payments/verify?authority=…&gw=bazaarpay`) و `phone` (پیش‌پرکردن لاگین درگاه) ساخته است.
+2. `url_launcher` → کاربر در `app.bazaar-pay.ir` پرداخت می‌کند → درگاه به `redirect_url` برمی‌گرداند.
+3. سرور روی callback: **trace منبع حقیقت است** (پارامترهای ریدایرکت هرگز معتبر فرض نمی‌شوند)؛ اگر `paid_not_committed` → `commit` (⚠️ اگر کامیت نشود، طبق مستند رسمی کل مبلغ بعد از چند دقیقه به کیف پول کاربر در بازارپی برمی‌گردد) → fulfillment (شارژ کیف پول CaffeNet) → ریدایرکت به `appUrl/?payment=success\|failed`.
+4. اپ: Poller هر ۳ ثانیه روی `GET /payments/status?authority=` — سرور پرداخت‌های pending بازارپی را reconcile می‌کند (self-healing اگر callback گم شود) → paid/failed.
+
+وضعیت‌های trace (enum رسمی): `invalid_token`، `unpaid`، `paid_not_committed`، `paid_not_committed_refunded`، `paid_committed`، `refunded`، `timed_out` — دو حالت paid = موفق؛ unpaid = هنوز در جریان؛ بقیه = failed.
+
+#### 4.5.3 جریان B — پرداخت درون‌اپ با SDK اندروید (T8.6a/b)
+
+- **پیش‌نیاز سرور:** همان مرحله ۱ جریان A است؛ همان `redirectUrl` (payment_url + redirect_url + phone) به SDK داده می‌شود (پارامتر redirect_url در سناریوی SDK بی‌اثر است چون نتیجه از Activity Result می‌آید).
+- **پل فلاتر:** `MethodChannel('caffenet/bazaar_pay')` + کد ناتیو Kotlin در `MainActivity` — launcher باید **به‌صورت فیلد کلاس** ثبت شود (الزام Activity Result API: ثبت پیش از onStart):
+
+```kotlin
+// MainActivity.kt
+private val bazaarPayLauncher = registerForActivityResult(StartBazaarPay()) { isSuccessful ->
+    methodChannelResult?.success(isSuccessful)
+}
+// متد pay در MethodChannel: options = BazaarPayOptions.paymentUrl(paymentUrl)
+//     .phoneNumber(phone).build()  →  bazaarPayLauncher.launch(options)
+```
+
+```dart
+// core/services/bazaar_pay_bridge.dart
+static const _ch = MethodChannel('caffenet/bazaar_pay');
+Future<bool> payInApp({required String paymentUrl, String? phone}) async {
+  try {
+    return await _ch.invokeMethod('pay', {'paymentUrl': paymentUrl, 'phone': phone});
+  } on PlatformException {
+    return false; // SDK در دسترس نیست → fallback به جریان A (وب)
+  }
+}
+```
+
+- پس از `isSuccessful == true`: اپ فقط `GET /payments/status?authority=` را صدا می‌زند — **کامیت همیشه سمت سرور** انجام می‌شود، طبق توصیه صریح README SDK («we recommend this happens on the server side»). کامیت از داخل اپ با SDK هرگز انجام نمی‌شود.
+- iOS یا خطای دسترسی SDK → fallback خودکار به جریان A.
+- سایر قابلیت‌های SDK (برای آینده): `StartDirectPayFinalizeContract` (امضای قرارداد — 4.5.4)، `StartIncreaseBalance` (صفحه شارژ مستقیم کیف پول بازارپی)، `StartLogin`/`getBazaarPayBalance` (فقط اگر موجودی بازارپی خواستیم)؛ autoLogin token فعلاً نداریم → ارسال نمی‌شود.
+
+#### 4.5.4 جریان C — Direct Pay: پرداخت خودکار سفارش (T8.6c/d/e)
+
+بر اساس direct-pay.md؛ بک‌اند کامل پیاده دارد (`requestDirectOrder` + `contractCallback` + `executeDirectPay` اتمیک):
+
+1. `POST /orders/{id}/pay-bazaarpay` → دو حالت:
+   - **قرارداد فعال دارد** → سرور در یک تراکنش اتمیک: `checkout/init` → `POST /badje/v2/direct-pay/ {contract_token, checkout_token}` (طبق مستند نیازی به commit نیست — اتوکامیت) → پاسخ `{status:'paid'\|'pending', message, orderId}` یا `{status:'failed', error}` با 400.
+   - **قرارداد ندارد** → سرور قرارداد می‌سازد (`contract/init` با type/period/amountLimit از تنظیمات ادمین) و پاسخ `{status:'contract_pending', message, contractRedirectUrl, paymentId, orderId}` می‌دهد. `contract_token` داخل query پارامترهای `contractRedirectUrl` است (اپ پارس می‌کند؛ BE-9 اختیاری: فیلد صریح).
+2. حالت `contract_pending` → کاربر به صفحه امضا می‌رود:
+   - **وب:** همان `contractRedirectUrl` = `https://app.bazaar-pay.ir/contract/direct-pay?contract_token=…&redirect_url=…&phone=…&message=…` (بک‌اند ساخته)
+   - **یا SDK اندروید:** استخراج `contract_token` از URL → MethodChannel → `StartDirectPayFinalizeContract(DirectPayContractOptions(contractToken, message, phoneNumber))`
+3. پس از امضا: مسیر وب به `GET /payments/bazaarpay/contract` روی سرور برمی‌گردد — سرور trace قرارداد می‌گیرد، اگر `active` بود و پرداخت pending مانده، خودش `executeDirectPay` را ادامه می‌دهد. اپ صرفاً Poller روی `/payments/status` را ادامه می‌دهد (وضعیت سفارش خودکار به‌روز می‌شود).
+4. وضعیت‌های قرارداد (trace-contract رسمی): `new \| active \| declined \| cancelled \| expired` + `amount_limit` و `limit_remaining_amount` (مانده سقف دوره جاری). نوع/دوره/سقف قرارداد از تنظیمات ادمین (`bazaarPay.direct*`) می‌آید — اپ تصمیمی نمی‌گیرد.
+5. **نگاشت خطاهای v2** (`{detail, code}`) در `strings.dart`:
+   - `account.insufficient_balance` → «موجودی کیف پول بازارپی کافی نیست» + دکمه شارژ (وب یا `StartIncreaseBalance`)
+   - `purchase.timeout` → «توکن پرداخت منقضی شده؛ از اول تلاش کنید» + دکمه تکرار (سرور idempotent است و توکن تازه می‌سازد)
+   - `direct_pay.inactive_contract` / `direct_pay.period_amount_limit_violation` → نمایش مانده سقف (`limit_remaining_amount`) + راهنمای تمدید/روش جایگزین
+   - `direct_debit.*` → پیام فارسی `detail` سرور عیناً نمایش داده شود
+6. اختیاری: `payable-amount` (فقط قرارداد wallet-type) برای نمایش «مبلغ قابل پرداخت تا پایان دوره» — سرویس بک‌اند دارد ولی endpoint اپ ندارد؛ در صورت نیاز، BE endpoint نازک اضافه می‌کند (خارج MVP).
+
+#### 4.5.5 قواعد مشترک هر سه مسیر
+
+- **Idempotency:** trace/commit/status همیشه قابل تکرارند؛ refund فقط **یک‌بار** per checkout_token معتبر است و مبلغ = اولین فراخوانی موفق — پس اپ هرگز refund صدا نمی‌زند (فقط ادمین/سرور).
+- **واحد پول:** API بازارپی **ریال** است؛ بک‌اند با `bazaarPayRialRate` (پیش‌فرض ×۱۰) تبدیل می‌کند. اپ همیشه با بک‌اند **تومان** کار می‌کند — هر تبدیل ریالی سمت فلاتر ممنوع.
+- **حالت تست:** `paymentTestMode` → توکن‌های `TEST-…` + صفحه `/test-gateway` — کل جریان‌های A/B/C بدون اعتبار مرچنت قابل E2E هستند؛ AC تست‌های T8.6 با همین حالت پذیرفته می‌شود.
+- **امنیت:** توکن مرچنت هرگز به اپ نمی‌رسد؛ verify فقط با trace؛ پارامترهای ریدایرکت معتبر فرض نمی‌شوند.
 
 ---
 ## 5. فازهای اجرایی (Task Graph)
@@ -388,7 +472,12 @@ assets/
 | T8.3 | Map AddressPicker (flutter_map + geolocator + geocoding) برای سفارش پیک → متن آدرس | اختیاری — نیاز تصمیم کاربر |
 | T8.4 | FCM: firebase_core/messaging + `/fcm/config` + ثبت توکن + نمایش پوش | اختیاری — نیاز پروژه Firebase و فایل‌های google-services.json از کاربر |
 | T8.5 | app_links: scheme `caffenet://` + تغییر ریدایرکت verify بک‌اند برای user-agent اپ (BE-7) → حذف صفحه polling | اختیاری |
-| T8.6 | BazaarPay Direct Pay برای سفارش‌ها (`POST /orders/{id}/pay-bazaarpay`) + IAP کافه‌بازار (شارژ با SKU) | اختیاری — پکیج درون‌برنامه‌ای بازار جدا لازم دارد |
+| T8.6a | پل ناتیو SDK بازارپی: JitPack `com.github.cafebazaar:bazaarpay:5.4.0` در `android/app/build.gradle` + `MainActivity` با `StartBazaarPay()` به‌صورت فیلد کلاس + `MethodChannel('caffenet/bazaar_pay')` + `BazaarPayBridge` در Dart با fallback وب (بخش 4.5.3) | اختیاری — اندروید API 17+؛ AC: پرداخت درون‌اپ با test-gateway paid برمی‌گرداند؛ iOS بدون کرش fallback می‌شود |
+| T8.6b | گزینه «پرداخت داخل اپ» در صفحه شارژ (فقط Android و وقتی SDK present): مسیر B بخش 4.5.3 → پس از isSuccessful حتماً `/payments/status` (کامیت سمت سرور) → رفرش موجودی | اختیاری — AC: هر سه نتیجه paid/failed/cancel تست شده |
+| T8.6c | Direct Pay در Checkout: دکمه «پرداخت مستقیم بازارپی» وقتی settings فلاگ direct را روشن کرده → هندل سه پاسخ paid/pending/failed + مسیر `contract_pending` (بخش 4.5.4) | اختیاری — AC: با قرارداد فعال، سفارش paid می‌شود؛ بدون قرارداد → contract_pending |
+| T8.6d | جریان امضای قرارداد: وب (`contractRedirectUrl`) یا SDK (`StartDirectPayFinalizeContract` با contract_token پارس‌شده از URL؛ BE-9 اختیاری برای فیلد صریح) + Poller ادامه‌دار روی `/payments/status` تا نتیجه | اختیاری — AC: پس از امضا در مرورگر، سفارش زیر ۱۵ ثانیه paid می‌شود |
+| T8.6e | نگاشت کدهای خطای v2 به UX (بخش 4.5.4-5): `account.insufficient_balance` → مسیر شارژ، `purchase.timeout` → تکرار، `direct_pay.*` → راهنمای سقف/تمدید + رگرسیون هر سه مسیر A/B/C روی test-gateway | اختیاری — AC: هر کد خطا پیام و اکشن مشخص دارد |
+| T8.6f | IAP کافه‌بازار (درگاه legacy `gateway:'bazaar'`): deepLink SKU-محور فقط با presets و کدهای `BAZAAR_FIXED_AMOUNT`/`BAZAAR_SKU_MISSING` — نیازمند پلاگین IAP بازار جداگانه | اختیاری — به‌تعویق؛ تصمیم باز |
 | T8.7 | صفحات Operator/Admin در فلاتر (صف، تغییر وضعیت، آپلود نتیجه) | اختیاری — فاز مستقل بزرگ؛ PWA فعلی همچنان پوشش می‌دهد |
 | T8.8 | Release prep: applicationId، signing، flavors (dev/prod)، versionCode، آیکون/اسپلش ناتیو، ProGuard، تست روی دستگاه واقعی، checklist استور | الزامی قبل انتشار |
 
@@ -398,7 +487,9 @@ assets/
 
 ## 6. تسک‌های کمکی بک‌اند (خلاصه)
 
-تمام تسک‌های BE در فاز P2 تعریف شدند (Sanctum، CSRF، فایل توکن‌دار، logout، مستندات) و عمداً **محدود و non-breaking** هستند. دو تسک احتمالی آینده: BE-7 (deep link redirect) و BE-8 (فعال‌سازی Reverb اگر زیرساخت عوض شد) — هر دو در بخش تصمیم‌های باز. هیچ refactor ساختاری روی بک‌اند لازم نیست؛ قرارداد فعلی پایدار و تست‌پوشش است.
+تمام تسک‌های BE در فاز P2 تعریف شدند (Sanctum، CSRF، فایل توکن‌دار، logout، مستندات) و عمداً **محدود و non-breaking** هستند. تسک‌های احتمالی آینده: BE-7 (deep link redirect)، BE-8 (فعال‌سازی Reverb اگر زیرساخت عوض شد) و BE-9 (افزودن فیلد صریح `contractToken` به پاسخ `contract_pending` Direct Pay بازارپی — فعلاً اپ آن را از query پارامترهای `contractRedirectUrl` پارس می‌کند) — هر سه در بخش تصمیم‌های باز. هیچ refactor ساختاری روی بک‌اند لازم نیست؛ قرارداد فعلی پایدار و تست‌پوشش است.
+
+**مستندسازی بازارپی:** کلیدهای سیاست درگاه (enabled/testMode/direct*) از پنل ادمین بک‌اند خوانده می‌شوند و جریان‌های A/B/C مطابق بخش 4.5 با مستندات رسمی تطبیق داده شده‌اند — هر تغییر آینده در `BazaarPayService` باید همزمان بخش 4.5 همین سند را به‌روز کند.
 
 ---
 ## 7. پروتکل اجرای ایجنتیک (این بخش را هر ایجنت قبل از شروع بخواند)
@@ -479,6 +570,9 @@ fix(T7.4): respect server 429 in order updates poller
 | تغییر شکل fields داینامیک (فیلد جدید بک‌اند) | متوسط | فرم‌ساز، نوع ناشناخته را به‌صورت text می‌رندر می‌کند + لاگ |
 | زمان/تقویم جلالی | قطعی (intl جلالی ندارد) | MVP: نمایش میلادی-فارسی؛ تصمیم باز 13-3 (shamsi_date یا فرمت از سرور) |
 | حذف/تغییر endpoint توسط PWA-team | کم | این سند = قرارداد؛ تغییر باید در هر دو ریپو مستند شود |
+| عدم کامیت بازارپی → بازگشت خودکار پول به کیف پول کاربر | کم | کامیت همیشه سمت سرور بعد از trace انجام می‌شود (توصیه رسمی README SDK)؛ status-poll و T6.5 self-healing کامیت گم‌شده را جبران می‌کند |
+| منقضی‌شدن checkout_token یا رسیدن به سقف دوره قرارداد Direct Pay | متوسط | کد `purchase.timeout` → تکرار با توکن تازه (سرور idempotent)؛ `period_amount_limit_violation` → نمایش مانده سقف + مسیر پرداخت جایگزین (شارژ کیف پول) |
+| نبود SDK بازارپی برای iOS/فلاتر | قطعی | مسیر پیش‌فرض همه‌جا وب است (T6.4)؛ SDK فقط بهبود UX اندروید (T8.6a/b) با fallback خودکار — هیچ جریانی به SDK وابسته نیست |
 
 ---
 
@@ -504,7 +598,7 @@ fix(T7.4): respect server 429 in order updates poller
 2. **تاریخ جلالی** — افزودن `shamsi_date` (پیشنهاد) یا فرمت از سرور؟
 3. **AddressPicker نقشه‌ای** — فلاتر-مپ برای سفارش پیک؛ در MVP فیلد متنی ساده کافی است.
 4. **صفحات Operator/Admin در فلاتر** — PWA فعلی این نقش‌ها را دارد؛ آیا انتقال لازم است؟ (فاز بزرگ جدا)
-5. **BazaarPay Direct / IAP کافه‌بازار** — درگاه‌های جایگزین شارژ؛ اولویت بازار هدف مشخص شود.
+5. **BazaarPay درون‌اپ / Direct Pay** — طراحی کامل بر اساس مستندات رسمی در بخش 4.5 و تسک‌های T8.6a..f آمده است؛ فقط زمان‌بندی اجرا (بعد از MVP؟) و فعال‌سازی مرچنت (توکن/destination/سقف قرارداد در پنل ادمین) باقی است. IAP کافه‌بازار (T8.6f) همچنان به‌تعویق.
 6. **branding رنگی** — پالت دقیق از PWA فعلی استخراج شد؛ اگر بسته هویتی جدید هست، قبل از فاز 0 اعلام شود.
 
 ---
@@ -710,6 +804,8 @@ class ApiEndpoints {
   static String track(String token) => 'orders/track/$token';
   static const paymentRequest = 'payments/request';
   static const paymentStatus = 'payments/status';
+  static const bazaarPayContractCallback = 'payments/bazaarpay/contract'; // callback مرورگر قرارداد (اپ صدا نمی‌زند)
+  static String payBazaarPay(String orderId) => 'orders/$orderId/pay-bazaarpay';
   static const walletTransactions = 'wallet/transactions';
   static const coupons = 'coupons';
   static const couponValidate = 'coupons/validate';
@@ -720,4 +816,4 @@ class ApiEndpoints {
 
 ---
 
-*پایان پلن — نسخه 1.0 (نوشته‌شده 2026-10-18 بر اساس audit کد caffenet-laravel). هر تغییر قرارداد = آپدیت همین سند.*
+*پایان پلن — نسخه 1.1 — (1.0: 2026-10-18 بر اساس audit کد caffenet-laravel؛ 1.1: 2026-10-18 افزودن بخش 4.5 «پرداخت درون‌برنامه‌ای بازارپی» بر اساس مستندات رسمی payment.md / direct-pay.md و Android SDK + تفکیک تسک‌های T8.6a..f + ریسک‌ها و نگاشت خطاهای v2). هر تغییر قرارداد = آپدیت همین سند.*
